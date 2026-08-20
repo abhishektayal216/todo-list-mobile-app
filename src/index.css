@@ -12,7 +12,7 @@ html, body, #root {
   margin: 0;
   padding: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f3f4f6;
+  background-color: #ffffff;
 }
 
 /* Hide scrollbar for calendar */
@@ -27,4 +27,41 @@ html, body, #root {
 /* Smooth transitions */
 .task-item {
   transition: all 0.2s ease;
+}
+
+/* App container - full screen on mobile */
+.app-shell {
+  min-height: 100dvh;
+  width: 100%;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* On tablets and desktop: soft gray background + centered container */
+@media (min-width: 640px) {
+  body, html {
+    background-color: #f3f4f6;
+  }
+  .app-shell {
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    max-width: 430px;
+    margin-top: 32px;
+    margin-bottom: 32px;
+    min-height: calc(100dvh - 64px);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
+  }
 }
