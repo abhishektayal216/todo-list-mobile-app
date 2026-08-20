@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parseISO, isToday } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay, isToday, parse, startOfDay, endOfDay } from 'date-fns';
 import { 
   Search, Plus, Trash2, Edit2, Check, X, 
   ChevronLeft, Calendar, Clock, 
@@ -14,10 +14,16 @@ const priorityColors = {
   High: 'bg-red-100 text-red-700',
 };
 
+// Parse yyyy-MM-dd as LOCAL date — avoids UTC timezone bugs (e.g. IST)
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  return parse(dateStr, 'yyyy-MM-dd', new Date());
+};
+
 function App() {
   const [tasks, setTasks] = useLocalStorage('todo-tasks', []);
   const [hasOnboarded, setHasOnboarded] = useLocalStorage('todo-onboarded', false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
   const [view, setView] = useState('home'); // home | search | add | edit
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTask, setEditingTask] = useState(null);
@@ -41,7 +47,8 @@ function App() {
     return tasks
       .filter(task => {
         try {
-          return isSameDay(parseISO(task.date), selectedDate);
+          const taskDate = parseLocalDate(task.date);
+          return taskDate && isSameDay(taskDate, selectedDate);
         } catch {
           return false;
         }
@@ -55,12 +62,12 @@ function App() {
 
   // Weekly stats
   const weeklyStats = useMemo(() => {
-    const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
-    const end = addDays(start, 6);
+    const start = startOfDay(startOfWeek(selectedDate, { weekStartsOn: 1 }));
+    const end = endOfDay(addDays(start, 6));
     const weekTasks = tasks.filter(t => {
       try {
-        const d = parseISO(t.date);
-        return d >= start && d <= end;
+        const d = parseLocalDate(t.date);
+        return d && d >= start && d <= end;
       } catch {
         return false;
       }
@@ -280,7 +287,6 @@ function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-5">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Task title</label>
             <input
@@ -292,7 +298,6 @@ function App() {
             />
           </div>
 
-          {/* Time */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Set Time</label>
             <div className="grid grid-cols-2 gap-3">
@@ -321,7 +326,6 @@ function App() {
             </div>
           </div>
 
-          {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Set Date</label>
             <div className="relative">
@@ -335,7 +339,6 @@ function App() {
             </div>
           </div>
 
-          {/* Priority */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
             <div className="flex gap-2">
@@ -360,7 +363,6 @@ function App() {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
             <textarea
@@ -386,7 +388,6 @@ function App() {
   // ========== HOME SCREEN ==========
   return (
     <div className="app-shell">
-      {/* Top icons */}
       <div className="flex items-center justify-between px-5 pt-5">
         <button className="p-1.5 rounded-lg hover:bg-gray-100">
           <Settings size={20} className="text-gray-500" />
@@ -401,7 +402,6 @@ function App() {
         </div>
       </div>
 
-      {/* Search bar */}
       <div className="px-5 mt-3">
         <button
           onClick={() => setView('search')}
@@ -412,14 +412,14 @@ function App() {
         </button>
       </div>
 
-      {/* Calendar strip */}
       <div className="px-5 mt-5">
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {weekDays.map(day => {
             const isSelected = isSameDay(day, selectedDate);
             const dayTasks = tasks.filter(t => {
               try {
-                return isSameDay(parseISO(t.date), day);
+                const taskDate = parseLocalDate(t.date);
+                return taskDate && isSameDay(taskDate, day);
               } catch {
                 return false;
               }
@@ -429,7 +429,7 @@ function App() {
             return (
               <button
                 key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
+                onClick={() => setSelectedDate(startOfDay(day))}
                 className={`flex flex-col items-center min-w-[48px] py-2 px-1 rounded-xl transition-all ${
                   isSelected
                     ? 'bg-[#3B82F6] text-white shadow-md'
@@ -459,7 +459,6 @@ function App() {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div className="px-5 mt-5 grid grid-cols-2 gap-3">
         <div className="bg-blue-50 rounded-2xl p-4 flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -483,7 +482,6 @@ function App() {
         </div>
       </div>
 
-      {/* Weekly Progress */}
       <div className="px-5 mt-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-2">Weekly Progress</h3>
         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -495,7 +493,6 @@ function App() {
         <p className="text-xs text-gray-400 mt-1 text-right">{weeklyStats.progress}%</p>
       </div>
 
-      {/* Tasks list */}
       <div className="px-5 mt-5 flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-800">
@@ -576,7 +573,6 @@ function App() {
         </div>
       </div>
 
-      {/* FAB */}
       <button
         onClick={openAdd}
         className="absolute bottom-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-[#3B82F6] hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 z-10"
